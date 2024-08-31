@@ -1,6 +1,6 @@
 <?php
 
-namespace VendorName\Skeleton\Database\Factories;
+namespace Psi\S3EventSns\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 

@@ -19,7 +19,7 @@
         "php": "^8.3",
         "aws/aws-php-sns-message-validator": "^1.9",
         "aws/aws-sdk-php": "^3.321",
-        "spatie/laravel-data": "^4.8",
+        "spatie/laravel-data": "^3.11",
         "spatie/laravel-package-tools": "^1.16"
     },
     "require-dev": {

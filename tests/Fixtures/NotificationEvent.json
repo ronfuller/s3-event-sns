@@ -1,0 +1,12 @@
+{
+    "Type": "Notification",
+    "MessageId": "267230da-e7b0-55a2-a2cd-6f9741c0a9c5",
+    "TopicArn": "arn:aws:sns:us-west-2:450595936069:psi-app-sync-dev",
+    "Subject": "Amazon S3 Notification",
+    "Message": "{\"Records\":[{\"eventVersion\":\"2.1\",\"eventSource\":\"aws:s3\",\"awsRegion\":\"us-west-2\",\"eventTime\":\"2024-08-31T23:15:59.623Z\",\"eventName\":\"ObjectCreated:Put\",\"userIdentity\":{\"principalId\":\"AWS:AIDAIY76UQZ4FUB3WV5UE\"},\"requestParameters\":{\"sourceIPAddress\":\"45.157.124.211\"},\"responseElements\":{\"x-amz-request-id\":\"GVVMF61AEADGS941\",\"x-amz-id-2\":\"hGPIayTOw4vsk+qbm+LeV8X9wduw3huM3OqWrundlbXlqISYC3h1I8fVqJZKYPcydqAeq523A8ICBk4F/wJXf4q0vnDZ3Q0P\"},\"s3\":{\"s3SchemaVersion\":\"1.0\",\"configurationId\":\"psi-dev-entity-sync\",\"bucket\":{\"name\":\"psi-entity-sync\",\"ownerIdentity\":{\"principalId\":\"A2Q2XKF92940IV\"},\"arn\":\"arn:aws:s3:::psi-entity-sync\"},\"object\":{\"key\":\"local/orders/2143892.json\",\"size\":33928,\"eTag\":\"c0ff8441eb53452d72bee79a3a3caa9b\",\"sequencer\":\"0066D3A42F749B9AEA\"}}}]}",
+    "Timestamp": "2024-08-31T23:16:00.276Z",
+    "SignatureVersion": "1",
+    "Signature": "fRIsc4NatxQ3bwQgnL6275Pf8YvXboWkHRWaj5Oj16tb677PHiPQGVrU5CXN3ifybMeIR+IpWMZSz/gCegkCL47COyRoMe2lpgAMt6rdesqKB+RLYKUYm0Jch0KuYt4TioAyi/VWqDLgBAtXdmPVParNtJRVMUG320CF0wke9ZtrLGWYd9YXhx0qO9ddfG5Gtp6KSXWYq9SZUW43JDeRLlidSJ8zN4S1kCuVBSwNe8kAE8Kb645K8+aZSoUrWHTZLRkyvzmP5YBZ0xDV8N56do/C4RIv4w4PVxLlKKD+r9o0OX/OTG6i5Tv1q8M+fBIALqj0VA9PS6763rATQzUkOA==",
+    "SigningCertURL": "https://sns.us-west-2.amazonaws.com/SimpleNotificationService-60eadc530605d63b8e62a523676ef735.pem",
+    "UnsubscribeURL": "https://sns.us-west-2.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-west-2:450595936069:psi-app-sync-dev:ee3707f9-1d6a-416a-8055-ef07465c2699"
+}

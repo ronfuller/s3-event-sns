@@ -1,0 +1,50 @@
+{
+    "content-length": [
+        "1599"
+    ],
+    "x-forwarded-host": [
+        "integrations.us-2.sharedwithexpose.com"
+    ],
+    "x-original-host": [
+        "integrations.us-2.sharedwithexpose.com"
+    ],
+    "x-exposed-by": [
+        "Expose 2.2.0"
+    ],
+    "upgrade-insecure-requests": [
+        "1"
+    ],
+    "x-expose-request-id": [
+        "66d37a047ca12"
+    ],
+    "x-forwarded-proto": [
+        "https"
+    ],
+    "x-forwarded-for": [
+        "15.221.164.58"
+    ],
+    "x-amz-sns-topic-arn": [
+        "arn:aws:sns:us-west-2:450595936069:psi-app-sync-dev"
+    ],
+    "x-amz-sns-message-type": [
+        "SubscriptionConfirmation"
+    ],
+    "x-amz-sns-message-id": [
+        "257053ac-1758-48c3-ae42-d21b22deee03"
+    ],
+    "content-type": [
+        "text\/plain; charset=UTF-8"
+    ],
+    "accept-encoding": [
+        "gzip,deflate"
+    ],
+    "user-agent": [
+        "Amazon Simple Notification Service Agent"
+    ],
+    "host": [
+        "integrations.us-2.sharedwithexpose.com"
+    ],
+    "connection": [
+        "close"
+    ]
+}

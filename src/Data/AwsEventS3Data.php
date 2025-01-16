@@ -71,4 +71,9 @@ final class AwsEventS3Data extends Data
 
         return EntityType::from($value);
     }
+
+    public function entityId(): string
+    {
+        return (string) str($this->key)->afterLast('/')->beforeLast('.');
+    }
 }

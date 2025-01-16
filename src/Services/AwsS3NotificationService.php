@@ -32,6 +32,7 @@ class AwsS3NotificationService
             $encrypted = data_get($eventData->s3->tags, 'encrypted', 'false') === 'true';
 
             $eventData->s3->contents = $service->getContents(
+                bucket: $eventData->s3->bucket,
                 key: $eventData->s3->key,
                 encrypted: $encrypted
             );

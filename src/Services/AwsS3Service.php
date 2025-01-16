@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Psi\S3EventSns\Services;
 
 use Aws\S3\S3Client;
+use Exception;
 use Illuminate\Encryption\Encrypter;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Psi\S3EventSns\Enums\EntityType;
@@ -15,6 +17,9 @@ class AwsS3Service
     private S3Client $s3;
 
     private Encrypter $encrypter;
+
+    /** @var array|string[] */
+    private array $disks;
 
     public function __construct(
         private readonly string $region,
@@ -30,6 +35,7 @@ class AwsS3Service
             key: $this->encryptKey,
             cipher: 'AES-128-CBC'
         );
+        $this->disks = \explode(',', $this->disk);
     }
 
     /**
@@ -49,9 +55,14 @@ class AwsS3Service
         })->toArray();
     }
 
-    public function getContents(string $key, bool $encrypted = false): array
+    /**
+     * @throws Exception
+     */
+    public function getContents(string $bucket, string $key, bool $encrypted = false): array
     {
-        $json = Storage::disk($this->disk)->get($key);
+        $disk = $this->getDisk($bucket);
+
+        $json = Storage::disk($disk)->get($key);
 
         if ($encrypted) {
             $json = $this->decrypt(contents: $json);
@@ -63,7 +74,7 @@ class AwsS3Service
     /**
      * Store an Entity on S3 creating a key based on the entity type.
      */
-    public function storeEntity(EntityType $entity, mixed $contents, ?string $uuid = null, array $tags = []): string
+    public function storeEntity(EntityType $entity, mixed $contents, ?string $uuid = null, array $tags = [], ?string $disk = null): string
     {
         $tags = $entity->tags(attributes: $tags);
         $key = $this->getKey(entity: $entity, uuid: $uuid);
@@ -76,7 +87,9 @@ class AwsS3Service
             'Tagging' => $this->urlEncode(data: $tags),
             'visibility' => 'private',
         ];
-        Storage::disk($this->disk)
+        $disk = $disk ?? $this->disks[0];
+
+        Storage::disk($disk)
             ->put(
                 path: $key,
                 contents: $json,
@@ -92,6 +105,28 @@ class AwsS3Service
     private function getKey(EntityType $entity, ?string $uuid = null): string
     {
         return collect([app()->environment(), $entity->value, ($uuid ?? (string) Str::uuid()).'.json'])->join('/');
+    }
+
+    private function getDisk(string $bucket): string
+    {
+        /** @var Collection<int,string> $diskColl */
+        $diskColl = collect($this->disks);
+
+        // @phpstan-ignore-next-line
+        $disk = $diskColl->first(function ($disk) use ($bucket) {
+            $fileSystemDisk = config("filesystems.disks.{$disk}");
+            if (\is_null($fileSystemDisk)) {
+                throw new \Exception("Disk {$disk} not found in filesystems config.");
+            }
+
+            return $fileSystemDisk['bucket'] === $bucket;
+        });
+
+        if (\is_null($disk)) {
+            throw new \Exception("Disk not found for bucket {$bucket}.");
+        }
+
+        return $disk;
     }
 
     /**

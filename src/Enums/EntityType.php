@@ -14,6 +14,7 @@ enum EntityType: string
 
     case ACCOUNT = 'accounts';
     case ORDER = 'orders';
+    case SCORECARD = 'scorecards';
     case INVOICE = 'invoices';
     case APPLICATION = 'applications';
     case REFERENCE = 'references';
@@ -30,6 +31,10 @@ enum EntityType: string
             self::ORDER => [
                 'entity' => self::ORDER->value,
                 'encrypted' => data_get($attributes, self::ORDER->value.'.encrypted') ?? 'true',
+            ],
+            self::SCORECARD => [
+                'entity' => self::SCORECARD->value,
+                'encrypted' => data_get($attributes, self::SCORECARD->value.'.encrypted') ?? 'false',
             ],
             self::INVOICE => [
                 'entity' => self::INVOICE->value,

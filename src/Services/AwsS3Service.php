@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Psi\S3EventSns\Services;
 
+use Aws\Credentials\CredentialProvider;
 use Aws\S3\S3Client;
 use Exception;
 use Illuminate\Encryption\Encrypter;
@@ -30,6 +31,7 @@ class AwsS3Service
         $this->s3 = new S3Client([
             'version' => 'latest',
             'region' => $this->region,
+            'credentials' => CredentialProvider::env(),
         ]);
         $this->encrypter = new Encrypter(
             key: $this->encryptKey,

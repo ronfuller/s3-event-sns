@@ -41,7 +41,6 @@ class S3EventSnsServiceProvider extends PackageServiceProvider
         $this->app->singleton(
             abstract: AwsS3Service::class,
             concrete: fn () => new AwsS3Service(
-                region: strval(config('s3-event-sns.storage-region')),
                 encryptKey: strval(config('s3-event-sns.encrypt-key')),
                 disk: strval(config('s3-event-sns.storage-disk')),
             )

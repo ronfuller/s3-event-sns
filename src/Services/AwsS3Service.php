@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Psi\S3EventSns\Services;
 
-use Aws\Credentials\CredentialProvider;
-use Aws\S3\S3Client;
 use Exception;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Collection;
@@ -15,24 +13,17 @@ use Psi\S3EventSns\Enums\EntityType;
 
 class AwsS3Service
 {
-    private S3Client $s3;
-
     private Encrypter $encrypter;
 
     /** @var array|string[] */
     private array $disks;
 
     public function __construct(
-        private readonly string $region,
         private readonly string $encryptKey,
         private readonly string $disk
 
     ) {
-        $this->s3 = new S3Client([
-            'version' => 'latest',
-            'region' => $this->region,
-            'credentials' => CredentialProvider::env(),
-        ]);
+
         $this->encrypter = new Encrypter(
             key: $this->encryptKey,
             cipher: 'AES-128-CBC'
@@ -43,11 +34,17 @@ class AwsS3Service
     /**
      * Get the tags from an S3 object. Returns an array of key/value pairs.
      * The Laravel Storage driver doesn't support this, so we need to use the SDK directly.
+     *
+     * @throws Exception
      */
     public function getTags(string $bucket, string $key): array
     {
+        $disk = $this->getDisk($bucket);
+
+        $storageClient = Storage::disk($disk)->getClient(); // @phpstan-ignore-line
+
         /** @var array $tagSet */
-        $tagSet = $this->s3->getObjectTagging([
+        $tagSet = $storageClient->getObjectTagging([
             'Bucket' => $bucket,
             'Key' => $key,
         ])->get('TagSet');

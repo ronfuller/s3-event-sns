@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Psi\S3EventSns\Services;
 
+use Aws\Credentials\CredentialProvider;
 use Aws\S3\S3Client;
 use Exception;
 use Illuminate\Encryption\Encrypter;
@@ -27,6 +28,8 @@ class AwsS3Service
 
     public bool $logging;
 
+    protected S3Client $client;
+
     public function __construct(
         private readonly string $encryptKey,
         private readonly string $disk
@@ -40,6 +43,12 @@ class AwsS3Service
         $this->disks = \explode(',', $this->disk);
 
         $this->logging = Config::boolean('s3-event-sns.logging');
+
+        $this->client = new S3Client([
+            'region' => 'us-west-2',
+            'version' => '2006-03-01',
+            'credentials' => CredentialProvider::env(),
+        ]);
     }
 
     /**
@@ -107,13 +116,9 @@ class AwsS3Service
     public function getClientTags(string $bucket, string $key): array
     {
         try {
-            $disk = $this->getDisk($bucket);
-
-            /** @var S3Client $storageClient */
-            $storageClient = Storage::disk($disk)->getClient(); // @phpstan-ignore-line
 
             /** @var array $tagSet */
-            $tagSet = $storageClient->getObjectTagging([
+            $tagSet = $this->client->getObjectTagging([
                 'Bucket' => $bucket,
                 'Key' => $key,
             ])->get('TagSet');
@@ -155,9 +160,10 @@ class AwsS3Service
      */
     public function getContents(string $bucket, string $key, bool $encrypted = false): array
     {
-        $disk = $this->getDisk($bucket);
-
-        $json = Storage::disk($disk)->get($key);
+        $json = $this->client->getObject([
+            'Bucket' => $bucket,
+            'Key' => $key,
+        ])->get('Body');
 
         if ($encrypted) {
             $json = $this->decrypt(contents: $json);
@@ -202,27 +208,26 @@ class AwsS3Service
         return collect([app()->environment(), $entity->value, ($uuid ?? (string) Str::uuid()).'.json'])->join('/');
     }
 
-    private function getDisk(string $bucket): string
-    {
-        /** @var Collection<int,string> $diskColl */
-        $diskColl = collect($this->disks);
-
-        // @phpstan-ignore-next-line
-        $disk = $diskColl->first(function ($disk) use ($bucket) {
-            $fileSystemDisk = config("filesystems.disks.{$disk}");
-            if (\is_null($fileSystemDisk)) {
-                throw new \Exception("Disk {$disk} not found in filesystems config.");
-            }
-
-            return $fileSystemDisk['bucket'] === $bucket;
-        });
-
-        if (\is_null($disk)) {
-            throw new \Exception("Disk not found for bucket {$bucket}.");
-        }
-
-        return $disk;
-    }
+    //    private function getDisk(string $bucket): string
+    //    {
+    //        /** @var Collection<int,string> $diskColl */
+    //        $diskColl = collect($this->disks);
+    //
+    //        $disk = $diskColl->first(function ($disk) use ($bucket) {
+    //            $fileSystemDisk = config("filesystems.disks.{$disk}");
+    //            if (\is_null($fileSystemDisk)) {
+    //                throw new \Exception("Disk {$disk} not found in filesystems config.");
+    //            }
+    //
+    //            return $fileSystemDisk['bucket'] === $bucket;
+    //        });
+    //
+    //        if (\is_null($disk)) {
+    //            throw new \Exception("Disk not found for bucket {$bucket}.");
+    //        }
+    //
+    //        return $disk;
+    //    }
 
     /**
      * AWS S3 Tagging requires url encoded data.

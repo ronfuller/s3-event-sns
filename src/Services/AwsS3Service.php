@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Psi\S3EventSns\Services;
 
+use Aws\S3\S3Client;
 use Exception;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Collection;
@@ -41,6 +42,7 @@ class AwsS3Service
     {
         $disk = $this->getDisk($bucket);
 
+        /** @var S3Client $storageClient */
         $storageClient = Storage::disk($disk)->getClient(); // @phpstan-ignore-line
 
         /** @var array $tagSet */

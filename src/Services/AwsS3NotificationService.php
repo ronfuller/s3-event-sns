@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Psi\S3EventSns\Services;
 
+use Exception;
 use Psi\S3EventSns\Data\AwsNotificationEventData;
 use Psi\S3EventSns\Events\S3NotificationEvent;
 
@@ -11,6 +12,9 @@ class AwsS3NotificationService
 {
     public function __construct(protected array $buckets) {}
 
+    /**
+     * @throws Exception
+     */
     public function handle(array $payload): void
     {
         /**

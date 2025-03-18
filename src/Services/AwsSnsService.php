@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Psi\S3EventSns\Services;
 
-use Aws\Credentials\Credentials;
 use Aws\Sns\MessageValidator;
-use Aws\Sns\SnsClient;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Traits\Conditionable;
+use Psi\S3EventSns\Jobs\AwsNotificationJob;
 use Psi\S3EventSns\Services\Aws\Message;
 use Psi\S3EventSns\Utils\FileHelper;
 use Throwable;
@@ -26,18 +25,6 @@ class AwsSnsService
     ) {
         $this->logging = Config::boolean('s3-event-sns.logging');
 
-    }
-
-    protected function client(): SnsClient
-    {
-        return new SnsClient([
-            'version' => '2010-03-31',
-            'region' => $this->region,
-            'credentials' => new Credentials(
-                $this->awsKey,
-                $this->awsSecret
-            ),
-        ]);
     }
 
     /**
@@ -79,10 +66,7 @@ class AwsSnsService
                     );
 
                     if ($subject === 'Amazon S3 Notification') {
-                        /** @var AwsS3NotificationService $service */
-                        $service = app(AwsS3NotificationService::class);
-
-                        $service->handle(payload: $messageData);
+                        \dispatch(new AwsNotificationJob($messageData));
                     }
 
                 }

@@ -38,7 +38,7 @@ class S3EventSnsServiceProvider extends PackageServiceProvider
             )
         );
 
-        $this->app->singleton(
+        $this->app->bind(
             abstract: AwsS3Service::class,
             concrete: fn () => new AwsS3Service(
                 encryptKey: strval(config('s3-event-sns.encrypt-key')),

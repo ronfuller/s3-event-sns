@@ -8,16 +8,24 @@ use Aws\S3\S3Client;
 use Exception;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Traits\Conditionable;
 use Psi\S3EventSns\Enums\EntityType;
 
 class AwsS3Service
 {
+    use Conditionable;
+
     private Encrypter $encrypter;
+
+    private array $tags;
 
     /** @var array|string[] */
     private array $disks;
+
+    public bool $logging;
 
     public function __construct(
         private readonly string $encryptKey,
@@ -30,6 +38,8 @@ class AwsS3Service
             cipher: 'AES-128-CBC'
         );
         $this->disks = \explode(',', $this->disk);
+
+        $this->logging = Config::boolean('s3-event-sns.logging');
     }
 
     /**
@@ -40,22 +50,73 @@ class AwsS3Service
      */
     public function getTags(string $bucket, string $key): array
     {
-        $disk = $this->getDisk($bucket);
+        // If we can't get tags from the S3 client, we'll get an empty array
+        $tags = $this->getClientTags(bucket: $bucket, key: $key);
 
-        /** @var S3Client $storageClient */
-        $storageClient = Storage::disk($disk)->getClient(); // @phpstan-ignore-line
-
-        //        /** @var array $tagSet */
-        //        $tagSet = $storageClient->getObjectTagging([
-        //            'Bucket' => $bucket,
-        //            'Key' => $key,
-        //        ])->get('TagSet');
-        //
-        //        return collect($tagSet)->mapWithKeys(function (array $tag) {
-        //            return [$tag['Key'] => $tag['Value']];
-        //        })->toArray();
-        return [];
+        // If we failed to get S3 client tags (PROD environment on Laravel Forge Weirdness) , infer from the key and bucket
+        return empty($tags) ? $this->getInferredTags(bucket: $bucket, key: $key) : $tags;
     }
+
+    public function getInferredTags(string $bucket, string $key): array
+    {
+        return $this->when(
+            value: $this->isArchiveOrder(bucket: $bucket, key: $key),
+            callback: fn () => $this->setServiceTags([
+                'encrypted' => 'true',
+                'version' => '1.0.0',
+                'action' => 'archive',
+                'entity' => 'order',
+            ])
+        )->when(
+            value: $this->isOrder(bucket: $bucket, key: $key),
+            callback: fn () => $this->setServiceTags([
+                'encrypted' => 'true',
+                'version' => '1.0.0',
+                'entity' => 'order',
+            ])
+        )->when(
+            value: $this->isAccount(bucket: $bucket, key: $key),
+            callback: fn () => $this->setServiceTags([
+                'encrypted' => 'true',
+                'version' => '1.0.0',
+                'entity' => 'account',
+            ])
+        )->getServiceTags();
+    }
+
+    public function getClientTags(string $bucket, string $key): array
+    {
+        try {
+            $disk = $this->getDisk($bucket);
+
+            /** @var S3Client $storageClient */
+            $storageClient = Storage::disk($disk)->getClient(); // @phpstan-ignore-line
+
+            /** @var array $tagSet */
+            $tagSet = $storageClient->getObjectTagging([
+                'Bucket' => $bucket,
+                'Key' => $key,
+            ])->get('TagSet');
+
+            return collect($tagSet)->mapWithKeys(function (array $tag) {
+                return [$tag['Key'] => $tag['Value']];
+            })->toArray();
+        } catch (\Throwable $th) {
+            $this->when(
+                value: $this->logging,
+                callback: fn () => logger()->error('Error in getting S3 Client tags', context: [
+                    'message' => $th->getMessage(),
+                ])
+            );
+
+            return [];
+        }
+
+    }
+
+    /**
+     * @throws Exception
+     */
 
     /**
      * @throws Exception
@@ -152,5 +213,32 @@ class AwsS3Service
     private function decrypt(string $contents): string
     {
         return $this->encrypter->decrypt(payload: $contents);
+    }
+
+    protected function isArchiveOrder(string $bucket, string $key): bool
+    {
+        return str_contains($key, 'orders') && str_contains($bucket, 'archive');
+    }
+
+    protected function isOrder(string $bucket, string $key): bool
+    {
+        return str_contains($key, 'orders') && str_contains($bucket, 'entity');
+    }
+
+    protected function isAccount(string $bucket, string $key): bool
+    {
+        return str_contains($key, 'accounts') && str_contains($bucket, 'entity');
+    }
+
+    protected function setServiceTags(array $tags): self
+    {
+        $this->tags = $tags;
+
+        return $this;
+    }
+
+    protected function getServiceTags(): array
+    {
+        return $this->tags;
     }
 }

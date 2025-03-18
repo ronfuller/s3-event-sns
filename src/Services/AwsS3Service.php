@@ -160,6 +160,7 @@ class AwsS3Service
      */
     public function getContents(string $bucket, string $key, bool $encrypted = false): array
     {
+        // Guzzle HTTP Stream Response
         $json = $this->client->getObject([
             'Bucket' => $bucket,
             'Key' => $key,

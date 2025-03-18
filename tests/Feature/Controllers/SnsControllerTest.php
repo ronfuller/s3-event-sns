@@ -24,6 +24,7 @@ it('should handle an SNS subscription', function () {
 });
 
 it('should handle an sns subscription error', function () {
+    config(['s3-event-sns.logging' => true]);
     // Arrange
     $data = getRequestData('SubscriptionConfirmationEvent', 'SubscriptionConfirmationHeaders'); // @phpstan-ignore-line
 

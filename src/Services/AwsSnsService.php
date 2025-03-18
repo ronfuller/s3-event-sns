@@ -7,17 +7,26 @@ namespace Psi\S3EventSns\Services;
 use Aws\Credentials\Credentials;
 use Aws\Sns\MessageValidator;
 use Aws\Sns\SnsClient;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Traits\Conditionable;
 use Psi\S3EventSns\Services\Aws\Message;
 use Psi\S3EventSns\Utils\FileHelper;
 use Throwable;
 
 class AwsSnsService
 {
+    use Conditionable;
+
+    public bool $logging;
+
     public function __construct(
         protected string $region,
         protected string $awsKey,
         protected string $awsSecret
-    ) {}
+    ) {
+        $this->logging = Config::boolean('s3-event-sns.logging');
+
+    }
 
     protected function client(): SnsClient
     {
@@ -39,6 +48,12 @@ class AwsSnsService
         try {
             $message = Message::fromRawPostData();
 
+            $this->when(
+                value: $this->logging,
+                callback: fn () => logger()->info('SNS Raw Message', context: [
+                    'message' => $message,
+                ])
+            );
             // make validator instance
             $validator = new MessageValidator;
 
@@ -56,11 +71,12 @@ class AwsSnsService
                     $subject = $message['Subject'];
                     $messageData = json_decode($message['Message'], associative: true);
 
-                    if (config('s3-event-sns.logging')) {
-                        logger()->info('SNS Notification', context: [
-                            'subject' => $subject,
-                        ]);
-                    }
+                    $this->when(
+                        value: $this->logging,
+                        callback: fn () => logger()->info('SNS Notification', context: [
+                            'message' => $messageData,
+                        ])
+                    );
 
                     if ($subject === 'Amazon S3 Notification') {
                         /** @var AwsS3NotificationService $service */
@@ -72,10 +88,14 @@ class AwsSnsService
                 }
             }
         } catch (Throwable $th) {
-            logger()->error('SNS Notification Error', context: [
-                'message' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-            ]);
+            $this->when(
+                value: $this->logging,
+                callback: fn () => logger()->error('SNS Notification Error', context: [
+                    'message' => $th->getMessage(),
+                    'trace' => $th->getTraceAsString(),
+                ])
+            );
+
             throw $th;
         }
     }

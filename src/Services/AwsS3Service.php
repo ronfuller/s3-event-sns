@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Psi\S3EventSns\Services;
 
-use Aws\Credentials\CredentialProvider;
 use Aws\S3\S3Client;
 use Exception;
 use Illuminate\Encryption\Encrypter;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -20,14 +20,10 @@ class AwsS3Service
 
     private Encrypter $encrypter;
 
-    private array $tags;
-
     /** @var array|string[] */
     private array $disks;
 
     public bool $logging;
-
-    protected S3Client $client;
 
     public function __construct(
         private readonly string $encryptKey,
@@ -42,12 +38,6 @@ class AwsS3Service
         $this->disks = \explode(',', $this->disk);
 
         $this->logging = Config::boolean('s3-event-sns.logging');
-
-        $this->client = new S3Client([
-            'region' => 'us-west-2',
-            'version' => '2006-03-01',
-            'credentials' => CredentialProvider::env(),
-        ]);
     }
 
     /**
@@ -59,65 +49,20 @@ class AwsS3Service
     public function getTags(string $bucket, string $key): array
     {
         // If we can't get tags from the S3 client, we'll get an empty array
-        $tags = $this->getClientTags(bucket: $bucket, key: $key);
+        return $this->getClientTags(bucket: $bucket, key: $key);
 
-        // If we failed to get S3 client tags (PROD environment on Laravel Forge Weirdness) , infer from the key and bucket
-        $tags = empty($tags) ? $this->getInferredTags(bucket: $bucket, key: $key) : $tags;
-
-        $this->when(
-            value: $this->logging,
-            callback: fn () => logger()->info('AwsS3Service:S3 Tags', context: [
-                'bucket' => $bucket,
-                'key' => $key,
-                'tags' => $tags,
-            ])
-        );
-
-        return $tags;
-
-    }
-
-    public function getInferredTags(string $bucket, string $key): array
-    {
-        $this->when(
-            value: $this->logging,
-            callback: fn () => logger()->info('AwsS3Service:Get Inferred Tags', context: [
-                'bucket' => $bucket,
-                'key' => $key,
-            ])
-        );
-
-        return $this->when(
-            value: $this->isArchiveOrder(bucket: $bucket, key: $key),
-            callback: fn () => $this->setServiceTags([
-                'encrypted' => 'true',
-                'version' => '1.0.0',
-                'action' => 'archive',
-                'entity' => 'order',
-            ])
-        )->when(
-            value: $this->isOrder(bucket: $bucket, key: $key),
-            callback: fn () => $this->setServiceTags([
-                'encrypted' => 'true',
-                'version' => '1.0.0',
-                'entity' => 'order',
-            ])
-        )->when(
-            value: $this->isAccount(bucket: $bucket, key: $key),
-            callback: fn () => $this->setServiceTags([
-                'encrypted' => 'true',
-                'version' => '1.0.0',
-                'entity' => 'account',
-            ])
-        )->getServiceTags();
     }
 
     public function getClientTags(string $bucket, string $key): array
     {
         try {
+            $disk = $this->getDisk($bucket);
+
+            /** @var S3Client $storageClient */
+            $storageClient = Storage::disk($disk)->getClient(); // @phpstan-ignore-line
 
             /** @var array $tagSet */
-            $tagSet = $this->client->getObjectTagging([
+            $tagSet = $storageClient->getObjectTagging([
                 'Bucket' => $bucket,
                 'Key' => $key,
             ])->get('TagSet');
@@ -149,6 +94,7 @@ class AwsS3Service
         }
 
     }
+
     /**
      * @throws Exception
      */
@@ -158,11 +104,9 @@ class AwsS3Service
      */
     public function getContents(string $bucket, string $key, bool $encrypted = false): array
     {
-        // Guzzle HTTP Stream Response
-        $json = $this->client->getObject([
-            'Bucket' => $bucket,
-            'Key' => $key,
-        ])->get('Body')->getContents();
+        $disk = $this->getDisk($bucket);
+
+        $json = Storage::disk($disk)->get($key);
 
         if ($encrypted) {
             $json = $this->decrypt(contents: $json);
@@ -207,6 +151,28 @@ class AwsS3Service
         return collect([app()->environment(), $entity->value, ($uuid ?? (string) Str::uuid()).'.json'])->join('/');
     }
 
+    private function getDisk(string $bucket): string
+    {
+        /** @var Collection<int,string> $diskColl */
+        $diskColl = collect($this->disks);
+
+        // @phpstan-ignore-next-line
+        $disk = $diskColl->first(function ($disk) use ($bucket) {
+            $fileSystemDisk = config("filesystems.disks.{$disk}");
+            if (\is_null($fileSystemDisk)) {
+                throw new \Exception("Disk {$disk} not found in filesystems config.");
+            }
+
+            return $fileSystemDisk['bucket'] === $bucket;
+        });
+
+        if (\is_null($disk)) {
+            throw new \Exception("Disk not found for bucket {$bucket}.");
+        }
+
+        return $disk;
+    }
+
     /**
      * AWS S3 Tagging requires url encoded data.
      */
@@ -228,32 +194,5 @@ class AwsS3Service
     private function decrypt(string $contents): string
     {
         return $this->encrypter->decrypt(payload: $contents);
-    }
-
-    protected function isArchiveOrder(string $bucket, string $key): bool
-    {
-        return str_contains($key, 'orders') && str_contains($bucket, 'archive');
-    }
-
-    protected function isOrder(string $bucket, string $key): bool
-    {
-        return str_contains($key, 'orders') && str_contains($bucket, 'entity');
-    }
-
-    protected function isAccount(string $bucket, string $key): bool
-    {
-        return str_contains($key, 'accounts') && str_contains($bucket, 'entity');
-    }
-
-    protected function setServiceTags(array $tags): self
-    {
-        $this->tags = $tags;
-
-        return $this;
-    }
-
-    protected function getServiceTags(): array
-    {
-        return $this->tags;
     }
 }

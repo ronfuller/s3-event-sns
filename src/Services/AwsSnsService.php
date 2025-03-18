@@ -38,7 +38,7 @@ class AwsSnsService
             $this->when(
                 value: $this->logging,
                 callback: fn () => logger()->info('SNS Raw Message', context: [
-                    'message' => $message,
+                    'message' => $message->toArray(),
                 ])
             );
             // make validator instance
@@ -64,6 +64,34 @@ class AwsSnsService
                             'message' => $messageData,
                         ])
                     );
+
+                    $filters = Config::array(
+                        's3-event-sns.path_filters',
+                        []
+                    );
+
+                    if (! empty($filters)) {
+                        $objectKey = $messageData['Records'][0]['s3']['object']['key'];
+                        /** @phpstan-ignore-next-line  */
+                        $hasKeyPath = collect($filters)->contains(function ($filter) use ($objectKey) {
+                            return str_contains($objectKey, $filter);
+                        });
+
+                        if (! $hasKeyPath) {
+
+                            $this->when(
+                                value: $this->logging,
+                                callback: fn () => logger()->info('SNS Notification Ignored', context: [
+                                    'message' => $messageData,
+                                    'filters' => $filters,
+                                    'objectKey' => $objectKey,
+                                ])
+                            );
+
+                            return;
+                        }
+
+                    }
 
                     if ($subject === 'Amazon S3 Notification') {
                         \dispatch(new AwsNotificationJob($messageData));

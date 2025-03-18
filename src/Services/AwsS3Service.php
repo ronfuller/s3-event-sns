@@ -45,15 +45,16 @@ class AwsS3Service
         /** @var S3Client $storageClient */
         $storageClient = Storage::disk($disk)->getClient(); // @phpstan-ignore-line
 
-        /** @var array $tagSet */
-        $tagSet = $storageClient->getObjectTagging([
-            'Bucket' => $bucket,
-            'Key' => $key,
-        ])->get('TagSet');
-
-        return collect($tagSet)->mapWithKeys(function (array $tag) {
-            return [$tag['Key'] => $tag['Value']];
-        })->toArray();
+        //        /** @var array $tagSet */
+        //        $tagSet = $storageClient->getObjectTagging([
+        //            'Bucket' => $bucket,
+        //            'Key' => $key,
+        //        ])->get('TagSet');
+        //
+        //        return collect($tagSet)->mapWithKeys(function (array $tag) {
+        //            return [$tag['Key'] => $tag['Value']];
+        //        })->toArray();
+        return [];
     }
 
     /**

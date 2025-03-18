@@ -17,6 +17,9 @@ return [
     'buckets' => [
         'psi-entity-sync',
     ],
+    'path_filters' => [
+
+    ],
 
     /**
      * Enable logging of SNS Notification Events

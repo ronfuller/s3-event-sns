@@ -72,9 +72,13 @@ class AwsSnsService
 
                     if (! empty($filters)) {
                         $objectKey = $messageData['Records'][0]['s3']['object']['key'];
+                        $objectBucket = $messageData['Records'][0]['s3']['bucket']['name'];
+
+                        $s3path = $objectBucket.'/'.$objectKey;
+
                         /** @phpstan-ignore-next-line  */
-                        $hasKeyPath = collect($filters)->contains(function ($filter) use ($objectKey) {
-                            return str_contains($objectKey, $filter);
+                        $hasKeyPath = collect($filters)->contains(function ($filter) use ($s3path) {
+                            return str_contains($s3path, $filter);
                         });
 
                         if (! $hasKeyPath) {

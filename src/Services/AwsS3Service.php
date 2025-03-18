@@ -163,7 +163,7 @@ class AwsS3Service
         $json = $this->client->getObject([
             'Bucket' => $bucket,
             'Key' => $key,
-        ])->get('Body');
+        ])->get('Body')->getContents();
 
         if ($encrypted) {
             $json = $this->decrypt(contents: $json);

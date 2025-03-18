@@ -54,11 +54,31 @@ class AwsS3Service
         $tags = $this->getClientTags(bucket: $bucket, key: $key);
 
         // If we failed to get S3 client tags (PROD environment on Laravel Forge Weirdness) , infer from the key and bucket
-        return empty($tags) ? $this->getInferredTags(bucket: $bucket, key: $key) : $tags;
+        $tags = empty($tags) ? $this->getInferredTags(bucket: $bucket, key: $key) : $tags;
+
+        $this->when(
+            value: $this->logging,
+            callback: fn () => logger()->info('AwsS3Service:S3 Tags', context: [
+                'bucket' => $bucket,
+                'key' => $key,
+                'tags' => $tags,
+            ])
+        );
+
+        return $tags;
+
     }
 
     public function getInferredTags(string $bucket, string $key): array
     {
+        $this->when(
+            value: $this->logging,
+            callback: fn () => logger()->info('AwsS3Service:Get Inferred Tags', context: [
+                'bucket' => $bucket,
+                'key' => $key,
+            ])
+        );
+
         return $this->when(
             value: $this->isArchiveOrder(bucket: $bucket, key: $key),
             callback: fn () => $this->setServiceTags([
@@ -98,9 +118,21 @@ class AwsS3Service
                 'Key' => $key,
             ])->get('TagSet');
 
-            return collect($tagSet)->mapWithKeys(function (array $tag) {
+            $tags = collect($tagSet)->mapWithKeys(function (array $tag) {
                 return [$tag['Key'] => $tag['Value']];
             })->toArray();
+
+            $this->when(
+                value: $this->logging,
+                callback: fn () => logger()->info('AwsS3Service:Get Client Tags', context: [
+                    'bucket' => $bucket,
+                    'key' => $key,
+                    'tags' => $tags,
+                ])
+            );
+
+            return $tags;
+
         } catch (\Throwable $th) {
             $this->when(
                 value: $this->logging,

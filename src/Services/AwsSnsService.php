@@ -83,15 +83,6 @@ class AwsSnsService
 
                         if (! $hasKeyPath) {
 
-                            $this->when(
-                                value: $this->logging,
-                                callback: fn () => logger()->info('SNS Notification Ignored', context: [
-                                    'message' => $messageData,
-                                    'filters' => $filters,
-                                    'objectKey' => $objectKey,
-                                ])
-                            );
-
                             return;
                         }
 

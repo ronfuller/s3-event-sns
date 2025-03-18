@@ -5,22 +5,35 @@ declare(strict_types=1);
 namespace Psi\S3EventSns\Services;
 
 use Exception;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Traits\Conditionable;
 use Psi\S3EventSns\Data\AwsNotificationEventData;
 use Psi\S3EventSns\Events\S3NotificationEvent;
 
 class AwsS3NotificationService
 {
-    public function __construct(protected array $buckets) {}
+    use Conditionable;
+
+    protected bool $logging;
+
+    public function __construct(protected array $buckets)
+    {
+        $this->logging = Config::boolean('s3-event-sns.logging');
+    }
 
     /**
      * @throws Exception
      */
     public function handle(array $payload): void
     {
-        /**
-         * @var AwsNotificationEventData $eventData
-         */
         $eventData = AwsNotificationEventData::from(data_get($payload, 'Records.0'));
+
+        $this->when(
+            value: $this->logging,
+            callback: fn () => logger()->info('Aws Notification Service', context: [
+                'event' => $eventData->toArray(),
+            ])
+        );
 
         /**
          * @var AwsS3Service $service

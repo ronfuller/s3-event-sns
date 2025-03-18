@@ -8,7 +8,6 @@ use Aws\Credentials\CredentialProvider;
 use Aws\S3\S3Client;
 use Exception;
 use Illuminate\Encryption\Encrypter;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -150,7 +149,6 @@ class AwsS3Service
         }
 
     }
-
     /**
      * @throws Exception
      */
@@ -208,27 +206,6 @@ class AwsS3Service
     {
         return collect([app()->environment(), $entity->value, ($uuid ?? (string) Str::uuid()).'.json'])->join('/');
     }
-
-    //    private function getDisk(string $bucket): string
-    //    {
-    //        /** @var Collection<int,string> $diskColl */
-    //        $diskColl = collect($this->disks);
-    //
-    //        $disk = $diskColl->first(function ($disk) use ($bucket) {
-    //            $fileSystemDisk = config("filesystems.disks.{$disk}");
-    //            if (\is_null($fileSystemDisk)) {
-    //                throw new \Exception("Disk {$disk} not found in filesystems config.");
-    //            }
-    //
-    //            return $fileSystemDisk['bucket'] === $bucket;
-    //        });
-    //
-    //        if (\is_null($disk)) {
-    //            throw new \Exception("Disk not found for bucket {$bucket}.");
-    //        }
-    //
-    //        return $disk;
-    //    }
 
     /**
      * AWS S3 Tagging requires url encoded data.

@@ -38,10 +38,11 @@ class AwsNotificationJob implements ShouldQueue
      *
      * @return array<int, object>
      */
-    public function middleware(): array
-    {
-        $key = data_get($this->messageData, 'Records.0.s3.object.key', (string) \Str::uuid());
+    //    public function middleware(): array
+    //    {
+    //        $key = data_get($this->messageData, 'Records.0.s3.object.key', (string) \Str::uuid());
+    //
+    //        return [(new WithoutOverlapping($key))->dontRelease()];
+    //    }
 
-        return [(new WithoutOverlapping($key))->dontRelease()];
-    }
 }

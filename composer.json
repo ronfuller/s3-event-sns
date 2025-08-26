@@ -8,12 +8,6 @@
   ],
   "homepage": "https://github.com/psi/s3-event-sns",
   "license": "MIT",
-  "repositories": [
-    {
-      "type": "git",
-      "url": "https://github.com/ronfuller/laravel-data"
-    }
-  ],
   "authors": [
     {
       "name": "Ron Fuller",
@@ -25,7 +19,7 @@
     "php": "^8.3",
     "aws/aws-php-sns-message-validator": "^1.9",
     "aws/aws-sdk-php": "^3.321",
-    "spatie/laravel-data": "dev-main",
+    "spatie/laravel-data": "^4.0",
     "spatie/laravel-package-tools": "^1.16"
   },
   "require-dev": {
